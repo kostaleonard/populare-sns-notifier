@@ -1,0 +1,54 @@
+"""Publishes messages to SNS."""
+
+import os
+from typing import Any
+import json
+import boto3
+
+SNS_TOPIC_ENV = "POPULARE_SNS_TOPIC_ARN"
+SMS_MESSAGE_MAX_LEN = 140
+
+
+def publish_message(
+        target_arn: str,
+        message: dict[str, Any]
+) -> dict[str, Any]:
+    """Publishes a message to SNS and returns the response.
+
+    Documentation on AWS-supported protocols for SNS is available here:
+    https://docs.aws.amazon.com/sns/latest/api/API_Subscribe.html
+
+    To limit potential charges, messages over SMS (cell phone) are limited to a
+    single text, and so must be no longer than 140 characters.
+
+    :param target_arn: The ARN of the SNS topic to which to publish the
+        message.
+    :param message: The JSON-encoded message to publish. The keys are the
+        AWS-supported protocols to which you would like to send the message,
+        one of which must be "default". The values are the JSON objects that
+        you would like to send over each protocol.
+    :return: The JSON response from the AWS API.
+    """
+    if "sms" in message and len(message["sms"]) > SMS_MESSAGE_MAX_LEN:
+        raise ValueError(
+            f"SMS messages must contain no more than {SMS_MESSAGE_MAX_LEN} "
+            "characters"
+        )
+    client = boto3.client("sns")
+    return client.publish(
+        TargetArn=target_arn,
+        Message=json.dumps(message),
+        Subject="Populare SNS Notifier Update",
+        MessageStructure="json"
+    )
+
+
+def main() -> None:
+    """Runs the program."""
+    target_arn = os.environ[SNS_TOPIC_ENV]
+    message = {"default": "Hello SNS"}
+    publish_message(target_arn, message)
+
+
+if __name__ == "__main__":
+    main()
