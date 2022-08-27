@@ -1,4 +1,4 @@
-VERSION=$(shell python -c "from populare_db_proxy import __version__; print(__version__)")
+VERSION=$(shell python -c "from populare_sns_notifier import __version__; print(__version__)")
 
 all: help
 
