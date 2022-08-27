@@ -17,7 +17,7 @@ test:
 	coverage xml
 
 run:
-	# TODO
+	PYTHONPATH=. python populare_sns_notifier/notifier.py
 
 docker_build:
 	@echo Building $(VERSION) and latest

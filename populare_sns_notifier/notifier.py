@@ -1,12 +1,25 @@
 """Publishes messages to SNS."""
 
-import os
 from typing import Any
 import json
 import boto3
 
-SNS_TOPIC_ENV = "POPULARE_SNS_TOPIC_ARN"
+SNS_TOPIC_CONFIG_PATH = "/etc/populare-sns-notifier/populare-sns-topic-arn"
 SMS_MESSAGE_MAX_LEN = 140
+
+
+def get_sns_topic_arn(config_filename: str = SNS_TOPIC_CONFIG_PATH) -> str:
+    """Returns the SNS topic ARN.
+
+    The SNS topic ARN is loaded from config_filename, which is a Kubernetes
+    ConfigMap volume mount. If the file is absent, this operation will raise
+    a FileNotFoundError.
+
+    :param config_filename: The path to the file containing the SNS topic ARN.
+    :return: The SNS topic ARN.
+    """
+    with open(config_filename, "r", encoding="utf-8") as infile:
+        return infile.read().strip()
 
 
 def publish_message(
@@ -34,7 +47,7 @@ def publish_message(
             f"SMS messages must contain no more than {SMS_MESSAGE_MAX_LEN} "
             "characters"
         )
-    client = boto3.client("sns")
+    client = boto3.client("sns", region_name="us-east-2")
     return client.publish(
         TargetArn=target_arn,
         Message=json.dumps(message),
@@ -45,7 +58,7 @@ def publish_message(
 
 def main() -> None:
     """Runs the program."""
-    target_arn = os.environ[SNS_TOPIC_ENV]
+    target_arn = get_sns_topic_arn()
     message = {"default": "Hello SNS"}
     publish_message(target_arn, message)
 
