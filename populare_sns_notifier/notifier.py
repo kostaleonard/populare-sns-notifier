@@ -27,7 +27,8 @@ def get_recent_posts(
     resp = requests.post(
         db_proxy_graphql_url,
         data=payload,
-        headers=REQUEST_HEADERS
+        headers=REQUEST_HEADERS,
+        timeout=10
     )
     resp_json = json.loads(resp.text)
     post_bodies = [
