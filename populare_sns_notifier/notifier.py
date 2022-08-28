@@ -2,10 +2,39 @@
 
 from typing import Any
 import json
+import requests
 import boto3
 
+POPULARE_DB_PROXY_GRAPHQL_URL = "http://populare-db-proxy/graphql"
+REQUEST_HEADERS = {"Content-Type": "application/graphql"}
+DEFAULT_NUM_POSTS = 5
 SNS_TOPIC_CONFIG_PATH = "/etc/populare-sns-notifier/populare-sns-topic-arn"
 SMS_MESSAGE_MAX_LEN = 140
+
+
+def get_recent_posts(
+        db_proxy_graphql_url: str = POPULARE_DB_PROXY_GRAPHQL_URL,
+        num_posts: int = DEFAULT_NUM_POSTS
+) -> list[str]:
+    """Returns the most recent num_posts posts from the database.
+
+    :param db_proxy_graphql_url: The database proxy GraphQL URL to which a
+        request should be sent to read the most recent posts.
+    :param num_posts: The number of recent posts to return.
+    :return: The most recent num_posts posts from the database.
+    """
+    payload = f"{{ readPosts(limit: {num_posts}) }}"
+    resp = requests.post(
+        db_proxy_graphql_url,
+        data=payload,
+        headers=REQUEST_HEADERS,
+        timeout=10
+    )
+    resp_json = json.loads(resp.text)
+    post_bodies = [
+        json.loads(post)["text"] for post in resp_json["data"]["readPosts"]
+    ]
+    return post_bodies
 
 
 def get_sns_topic_arn(config_filename: str = SNS_TOPIC_CONFIG_PATH) -> str:
@@ -59,7 +88,8 @@ def publish_message(
 def main() -> None:
     """Runs the program."""
     target_arn = get_sns_topic_arn()
-    message = {"default": "Hello SNS"}
+    posts = get_recent_posts()
+    message = {"default": "\n".join(posts)}
     publish_message(target_arn, message)
 
 
